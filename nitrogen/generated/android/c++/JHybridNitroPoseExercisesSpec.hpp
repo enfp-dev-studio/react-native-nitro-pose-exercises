@@ -51,6 +51,8 @@ namespace margelo::nitro::nitroposeexercises {
   public:
     // Properties
     SessionStatus getStatus() override;
+    double getMotionPeak() override;
+    double getMotionBaseline() override;
     std::optional<std::function<void(const RepData& /* data */)>> getOnRepComplete() override;
     void setOnRepComplete(const std::optional<std::function<void(const RepData& /* data */)>>& onRepComplete) override;
     std::optional<std::function<void(ExercisePhase /* phase */)>> getOnPhaseChange() override;
@@ -72,6 +74,8 @@ namespace margelo::nitro::nitroposeexercises {
     ExercisePhase getCurrentPhase() override;
     double getRepCount() override;
     std::vector<Landmark> getLandmarks() override;
+    double getResultVersion() override;
+    double getLastProcessingMs() override;
 
   public:
     // Methods
@@ -80,6 +84,9 @@ namespace margelo::nitro::nitroposeexercises {
     void loadExercise(const ExerciseConfig& config) override;
     void processFrameIOS(const std::shared_ptr<margelo::nitro::camera::HybridFrameSpec>& frame) override;
     void processFrameAndroid(const std::shared_ptr<margelo::nitro::camera::HybridFrameSpec>& frame) override;
+    std::shared_ptr<Promise<void>> processFrameAndroidAsync(const std::shared_ptr<margelo::nitro::camera::HybridFrameSpec>& frame) override;
+    void startReferenceMotion() override;
+    void stopReferenceMotion() override;
     void startSession(double targetReps, double countdownSeconds) override;
     void pauseSession() override;
     void resumeSession() override;

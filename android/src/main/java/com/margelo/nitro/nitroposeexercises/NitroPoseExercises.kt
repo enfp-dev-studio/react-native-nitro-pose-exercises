@@ -2,7 +2,16 @@ package com.margelo.nitro.nitroposeexercises
 
 import com.margelo.nitro.camera.HybridFrameSpec
 import com.margelo.nitro.camera.public.NativeFrame
+import android.os.SystemClock
+import android.content.Context
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import android.os.Handler
+import android.os.Looper
 import com.google.android.gms.tasks.Tasks
+import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit
 import androidx.camera.core.ImageProxy
 
@@ -12,6 +21,7 @@ import com.facebook.proguard.annotations.DoNotStrip
 import com.google.mlkit.vision.pose.PoseDetection
 import com.google.mlkit.vision.pose.PoseDetector
 import com.google.mlkit.vision.pose.PoseLandmark
+import com.google.mlkit.vision.pose.Pose
 import com.google.mlkit.vision.pose.defaults.PoseDetectorOptions
 import com.margelo.nitro.NitroModules
 import com.margelo.nitro.core.Promise
@@ -19,6 +29,7 @@ import kotlin.math.acos
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
+import kotlin.math.pow
 
 // import android.media.Image
 // import android.graphics.Bitmap
@@ -33,8 +44,23 @@ import com.google.mlkit.vision.common.InputImage
 class NitroPoseExercises : HybridNitroPoseExercisesSpec() {
 
   // ─── ML Kit ─────────────────────────────────────────────────
-  private var poseDetector: PoseDetector? = null
-  private var isInitialized = false
+  @Volatile private var poseDetector: PoseDetector? = null
+  @Volatile private var isInitialized = false
+  private val detectorLock = Any()
+  private var detectorGeneration = 0L
+  private var asyncDetectorInFlight: PoseDetector? = null
+  private var lastAsyncProcessTime = 0L
+  // ML Kit invokes completion on its own task thread; no extra queue or RN hop.
+  private val completionExecutor = Executor { command -> command.run() }
+
+  private val motionLock = Any()
+  private var motionManager: SensorManager? = null
+  private var motionListener: SensorEventListener? = null
+  private var lastMotionTimestamp = 0L
+  @Volatile private var _motionPeak = 0.0
+  @Volatile private var _motionBaseline = 0.0
+  override val motionPeak: Double get() = _motionPeak
+  override val motionBaseline: Double get() = _motionBaseline
 
 
   // ─── Cached Landmarks (ML Kit is async, we cache last result) ──
@@ -92,8 +118,12 @@ class NitroPoseExercises : HybridNitroPoseExercisesSpec() {
   private var _repCount: Double = 0.0
   override val repCount: Double get() = _repCount
 
-  private var _landmarks: Array<Landmark> = emptyArray()
+  @Volatile private var _landmarks: Array<Landmark> = emptyArray()
   override val landmarks: Array<Landmark> get() = _landmarks
+  @Volatile private var _resultVersion: Double = 0.0
+  override val resultVersion: Double get() = _resultVersion
+  @Volatile private var _lastProcessingMs: Double = 0.0
+  override val lastProcessingMs: Double get() = _lastProcessingMs
 
   // ─── State Machine ──────────────────────────────────────────
   private var phaseHistory = mutableListOf<ExercisePhase>()
@@ -148,18 +178,79 @@ private var postureWasLost = false
         .setDetectorMode(PoseDetectorOptions.STREAM_MODE)
         .build()
 
-      poseDetector = PoseDetection.getClient(options)
-      isInitialized = true
+      val detector = PoseDetection.getClient(options)
+      synchronized(detectorLock) {
+        val previous = poseDetector
+        detectorGeneration += 1L
+        poseDetector = detector
+        isInitialized = true
+        if (previous !== asyncDetectorInFlight) previous?.close()
+      }
       println("[PoseExercise] Initialized with ML Kit Pose Detection (no model file needed)")
     }
   }
 
   override fun release() {
-    poseDetector?.close()
-    poseDetector = null
-    isInitialized = false
+    stopReferenceMotion()
+    synchronized(detectorLock) {
+      val previous = poseDetector
+      detectorGeneration += 1L
+      poseDetector = null
+      isInitialized = false
+      // A retained ImageProxy may still be read by ML Kit. Close after completion.
+      if (previous !== asyncDetectorInFlight) previous?.close()
+    }
     _status = SessionStatus.IDLE
     resetSession()
+  }
+
+  override fun startReferenceMotion() {
+    synchronized(motionLock) {
+      if (motionListener != null) return
+      _motionPeak = 0.0
+      _motionBaseline = 0.0
+      lastMotionTimestamp = 0L
+      val context = NitroModules.applicationContext ?: return
+      val manager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager ?: return
+      val sensor = manager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION) ?: return
+      val listener = object : SensorEventListener {
+        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+        override fun onSensorChanged(event: SensorEvent) {
+          synchronized(motionLock) {
+            if (motionListener !== this || event.values.size < 3) return
+            val x = event.values[0].toDouble()
+            val y = event.values[1].toDouble()
+            val z = event.values[2].toDouble()
+            // The reference promotes each axis before squaring; gravity starts as Float.
+            val norm = sqrt(x * x + y * y + z * z) / 9.80665f.toDouble()
+            if (!norm.isFinite()) return
+            val dt = if (lastMotionTimestamp == 0L) 0.0
+              else ((event.timestamp - lastMotionTimestamp) / 1_000_000_000.0).coerceAtLeast(0.0)
+            lastMotionTimestamp = event.timestamp
+            _motionPeak = max(norm, _motionPeak * 0.9.pow(dt * 30.0))
+            val baseline = _motionBaseline
+            _motionBaseline = (if (baseline <= 0.0 || norm < baseline) norm
+              else baseline + (norm - baseline) * 0.0005).coerceIn(0.0, 0.12)
+          }
+        }
+      }
+      motionManager = manager
+      motionListener = listener
+      if (!manager.registerListener(listener, sensor, 33_333, Handler(Looper.getMainLooper()))) {
+        motionListener = null
+        motionManager = null
+        return
+      }
+    }
+  }
+
+  override fun stopReferenceMotion() {
+    synchronized(motionLock) {
+      motionListener?.let { motionManager?.unregisterListener(it) }
+      motionListener = null
+      motionManager = null
+      lastMotionTimestamp = 0L
+    }
   }
 
 override fun isReady(): Boolean {
@@ -217,7 +308,93 @@ override fun isReady(): Boolean {
 
 // Time-based throttle — more reliable than frame-count under variable FPS
 @Volatile private var lastProcessTime: Long = 0L
-private val minIntervalMs: Long = 66L  // ~15fps; lower to 33 for ~30fps once release build is fast enough
+private val minIntervalMs: Long = 33L  // Allow fresh landmarks up to ~30fps.
+private val minAsyncIntervalMs: Long = 32L  // Match the reference analyzer's admission interval.
+@Volatile private var lastExerciseProcessTime: Long = 0L
+private val minExerciseIntervalMs: Long = 66L  // Preserve the existing exercise-analysis cadence.
+
+override fun processFrameAndroidAsync(frame: HybridFrameSpec): Promise<Unit> {
+  val promise = Promise<Unit>()
+  val detector: PoseDetector
+  val generation: Long
+  synchronized(detectorLock) {
+    val current = poseDetector
+    val now = SystemClock.elapsedRealtime()
+    if (!isInitialized || current == null || asyncDetectorInFlight != null
+      || now - lastAsyncProcessTime < minAsyncIntervalMs) {
+      promise.resolve(Unit)
+      return promise
+    }
+    detector = current
+    generation = detectorGeneration
+    asyncDetectorInFlight = detector
+    lastAsyncProcessTime = now
+  }
+
+  fun finish() {
+    synchronized(detectorLock) {
+      asyncDetectorInFlight = null
+      if (detector !== poseDetector) detector.close()
+    }
+  }
+
+  try {
+    val nativeFrame = frame as? NativeFrame
+      ?: throw IllegalArgumentException("Expected a native Android camera Frame")
+    val imageProxy = nativeFrame.image
+    val mediaImage = imageProxy.image
+      ?: throw IllegalStateException("Camera Frame image is already closed")
+    val rotation = imageProxy.imageInfo.rotationDegrees
+    val rotated = rotation == 90 || rotation == 270
+    val imageWidth = (if (rotated) mediaImage.height else mediaImage.width).toDouble()
+    val imageHeight = (if (rotated) mediaImage.width else mediaImage.height).toDouble()
+    val inputImage = InputImage.fromMediaImage(mediaImage, rotation)
+    val startedAt = SystemClock.elapsedRealtimeNanos()
+    detector.process(inputImage).addOnCompleteListener(completionExecutor) { task ->
+      var error: Throwable? = null
+      try {
+        if (!task.isSuccessful) throw task.exception ?: IllegalStateException("Pose inference was cancelled")
+        val processingMs = (SystemClock.elapsedRealtimeNanos() - startedAt) / 1_000_000.0
+        val landmarks = normalizedLandmarks(task.result, imageWidth, imageHeight)
+        synchronized(detectorLock) {
+          if (isInitialized && generation == detectorGeneration && detector === poseDetector) {
+            synchronized(landmarkLock) {
+              cachedLandmarks = landmarks
+              _landmarks = landmarks
+              _lastProcessingMs = processingMs
+              // Publish last, including a successful no-body result.
+              _resultVersion += 1.0
+            }
+          }
+        }
+      } catch (failure: Throwable) {
+        error = failure
+      } finally {
+        finish()
+      }
+      if (error == null) promise.resolve(Unit) else promise.reject(error!!)
+    }
+  } catch (error: Throwable) {
+    finish()
+    promise.reject(error)
+  }
+  // Never dispose here. JS keeps this Frame until .finally after task completion.
+  return promise
+}
+
+private fun normalizedLandmarks(pose: Pose, imageWidth: Double, imageHeight: Double): Array<Landmark> {
+  if (pose.allPoseLandmarks.isEmpty()) return emptyArray()
+  val landmarks = Array(34) { Landmark(x = 0.0, y = 0.0, z = 0.0, visibility = 0.0) }
+  for (point in pose.allPoseLandmarks) {
+    val index = mlKitToMediaPipeMap[point.landmarkType] ?: continue
+    landmarks[index] = Landmark(
+      x = (point.position3D.x / imageWidth).coerceIn(0.0, 1.0),
+      y = (point.position3D.y / imageHeight).coerceIn(0.0, 1.0),
+      z = point.position3D.z.toDouble(), visibility = point.inFrameLikelihood.toDouble()
+    )
+  }
+  return landmarks
+}
 
 override fun processFrameAndroid(frame: HybridFrameSpec) {
   if (_status != SessionStatus.ACTIVE && _status != SessionStatus.COUNTDOWN) return
@@ -242,6 +419,7 @@ override fun processFrameAndroid(frame: HybridFrameSpec) {
     // SYNC inference — the frame's underlying ImageProxy is only valid until
     // VisionCamera disposes the frame after this method returns. Tasks.await
     // blocks the worklet thread which is exactly what we want here.
+    val processingStartedAt = SystemClock.elapsedRealtimeNanos()
     val pose = try {
       Tasks.await(poseDetector!!.process(inputImage), 200, TimeUnit.MILLISECONDS)
     } catch (e: Exception) {
@@ -250,6 +428,7 @@ override fun processFrameAndroid(frame: HybridFrameSpec) {
     }
 
     if (pose == null) return
+    val processingMs = (SystemClock.elapsedRealtimeNanos() - processingStartedAt) / 1_000_000.0
 
     val poseLandmarks = pose.allPoseLandmarks
 
@@ -276,10 +455,21 @@ override fun processFrameAndroid(frame: HybridFrameSpec) {
       synchronized(landmarkLock) {
         cachedLandmarks = landmarkArray
         _landmarks = landmarkArray
+        _lastProcessingMs = processingMs
+        _resultVersion += 1.0
       }
 
-      processExerciseLogic()
+      if (now - lastExerciseProcessTime >= minExerciseIntervalMs) {
+        lastExerciseProcessTime = now
+        processExerciseLogic()
+      }
     } else {
+      synchronized(landmarkLock) {
+        cachedLandmarks = emptyArray()
+        _landmarks = emptyArray()
+        _lastProcessingMs = processingMs
+        _resultVersion += 1.0
+      }
       if (!poseWasLost) {
         poseWasLost = true
         onPoseLost?.invoke()
@@ -362,9 +552,6 @@ private fun processExerciseLogic() {
   repAngleSnapshots = angleSnapshots.toTypedArray()
 
   val detectedPhase = determinePhase(currentAngles, config)
-
-  // Debug log — remove once reps count reliably
-  println("[Pose] angles=$currentAngles current=$_currentPhase detected=$detectedPhase history=$phaseHistory reps=$_repCount")
 
   if (detectedPhase != _currentPhase && detectedPhase != ExercisePhase.UNKNOWN) {
     val previousPhase = _currentPhase
@@ -619,6 +806,8 @@ private fun handlePhaseTransition(
     targetReps = 0.0
     countdownSeconds = 0.0
     frameCount = 0
+    lastProcessTime = 0L
+    lastExerciseProcessTime = 0L
     consecutivePostureFailures = 0
     postureWasLost = false
     synchronized(landmarkLock) {

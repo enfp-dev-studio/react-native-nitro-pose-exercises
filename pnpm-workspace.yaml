@@ -1,0 +1,7 @@
+packages:
+  - "."
+allowBuilds:
+  "@parcel/watcher": true
+  "@shopify/react-native-skia": true
+  lefthook: false
+  unrs-resolver: true

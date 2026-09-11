@@ -10,7 +10,6 @@ package com.margelo.nitro.nitroposeexercises
 import androidx.annotation.Keep
 import com.facebook.jni.HybridData
 import com.facebook.proguard.annotations.DoNotStrip
-import dalvik.annotation.optimization.FastNative
 
 
 /**
@@ -59,7 +58,6 @@ class Func_void_ExercisePhase_cxx: Func_void_ExercisePhase {
   override fun invoke(phase: ExercisePhase): Unit
     = invoke_cxx(phase)
 
-  @FastNative
   private external fun invoke_cxx(phase: ExercisePhase): Unit
 }
 

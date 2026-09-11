@@ -121,6 +121,12 @@ namespace margelo::nitro::nitroposeexercises {
       auto __result = _swiftPart.getStatus();
       return static_cast<SessionStatus>(__result);
     }
+    inline double getMotionPeak() noexcept override {
+      return _swiftPart.getMotionPeak();
+    }
+    inline double getMotionBaseline() noexcept override {
+      return _swiftPart.getMotionBaseline();
+    }
     inline std::optional<std::function<void(const RepData& /* data */)>> getOnRepComplete() noexcept override {
       auto __result = _swiftPart.getOnRepComplete();
       return __result;
@@ -195,6 +201,12 @@ namespace margelo::nitro::nitroposeexercises {
       auto __result = _swiftPart.getLandmarks();
       return __result;
     }
+    inline double getResultVersion() noexcept override {
+      return _swiftPart.getResultVersion();
+    }
+    inline double getLastProcessingMs() noexcept override {
+      return _swiftPart.getLastProcessingMs();
+    }
 
   public:
     // Methods
@@ -226,6 +238,26 @@ namespace margelo::nitro::nitroposeexercises {
     }
     inline void processFrameAndroid(const std::shared_ptr<margelo::nitro::camera::HybridFrameSpec>& frame) override {
       auto __result = _swiftPart.processFrameAndroid(frame);
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline std::shared_ptr<Promise<void>> processFrameAndroidAsync(const std::shared_ptr<margelo::nitro::camera::HybridFrameSpec>& frame) override {
+      auto __result = _swiftPart.processFrameAndroidAsync(frame);
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+      auto __value = std::move(__result.value());
+      return __value;
+    }
+    inline void startReferenceMotion() override {
+      auto __result = _swiftPart.startReferenceMotion();
+      if (__result.hasError()) [[unlikely]] {
+        std::rethrow_exception(__result.error());
+      }
+    }
+    inline void stopReferenceMotion() override {
+      auto __result = _swiftPart.stopReferenceMotion();
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }

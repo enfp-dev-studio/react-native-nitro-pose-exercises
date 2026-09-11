@@ -129,6 +129,20 @@ open class HybridNitroPoseExercisesSpec_cxx {
     }
   }
   
+  public final var motionPeak: Double {
+    @inline(__always)
+    get {
+      return self.__implementation.motionPeak
+    }
+  }
+  
+  public final var motionBaseline: Double {
+    @inline(__always)
+    get {
+      return self.__implementation.motionBaseline
+    }
+  }
+  
   public final var onRepComplete: bridge.std__optional_std__function_void_const_RepData_____data______ {
     @inline(__always)
     get {
@@ -443,6 +457,20 @@ open class HybridNitroPoseExercisesSpec_cxx {
       }()
     }
   }
+  
+  public final var resultVersion: Double {
+    @inline(__always)
+    get {
+      return self.__implementation.resultVersion
+    }
+  }
+  
+  public final var lastProcessingMs: Double {
+    @inline(__always)
+    get {
+      return self.__implementation.lastProcessingMs
+    }
+  }
 
   // Methods
   @inline(__always)
@@ -509,6 +537,51 @@ open class HybridNitroPoseExercisesSpec_cxx {
         let __instance = HybridFrameSpec_cxx.fromUnsafe(__unsafePointer)
         return __instance.getHybridFrameSpec()
       }())
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func processFrameAndroidAsync(frame: bridge.std__shared_ptr_margelo__nitro__camera__HybridFrameSpec_) -> bridge.Result_std__shared_ptr_Promise_void___ {
+    do {
+      let __result = try self.__implementation.processFrameAndroidAsync(frame: { () -> any HybridFrameSpec in
+        let __unsafePointer = bridge.get_std__shared_ptr_margelo__nitro__camera__HybridFrameSpec_(frame)
+        let __instance = HybridFrameSpec_cxx.fromUnsafe(__unsafePointer)
+        return __instance.getHybridFrameSpec()
+      }())
+      let __resultCpp = { () -> bridge.std__shared_ptr_Promise_void__ in
+        let __promise = bridge.create_std__shared_ptr_Promise_void__()
+        let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_void__(__promise)
+        __result
+          .then({ __result in __promiseHolder.resolve() })
+          .catch({ __error in __promiseHolder.reject(__error.toCpp()) })
+        return __promise
+      }()
+      return bridge.create_Result_std__shared_ptr_Promise_void___(__resultCpp)
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_std__shared_ptr_Promise_void___(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func startReferenceMotion() -> bridge.Result_void_ {
+    do {
+      try self.__implementation.startReferenceMotion()
+      return bridge.create_Result_void_()
+    } catch (let __error) {
+      let __exceptionPtr = __error.toCpp()
+      return bridge.create_Result_void_(__exceptionPtr)
+    }
+  }
+  
+  @inline(__always)
+  public final func stopReferenceMotion() -> bridge.Result_void_ {
+    do {
+      try self.__implementation.stopReferenceMotion()
       return bridge.create_Result_void_()
     } catch (let __error) {
       let __exceptionPtr = __error.toCpp()

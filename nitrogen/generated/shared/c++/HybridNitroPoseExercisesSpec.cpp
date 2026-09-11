@@ -15,6 +15,8 @@ namespace margelo::nitro::nitroposeexercises {
     // load custom methods/properties
     registerHybrids(this, [](Prototype& prototype) {
       prototype.registerHybridGetter("status", &HybridNitroPoseExercisesSpec::getStatus);
+      prototype.registerHybridGetter("motionPeak", &HybridNitroPoseExercisesSpec::getMotionPeak);
+      prototype.registerHybridGetter("motionBaseline", &HybridNitroPoseExercisesSpec::getMotionBaseline);
       prototype.registerHybridGetter("onRepComplete", &HybridNitroPoseExercisesSpec::getOnRepComplete);
       prototype.registerHybridSetter("onRepComplete", &HybridNitroPoseExercisesSpec::setOnRepComplete);
       prototype.registerHybridGetter("onPhaseChange", &HybridNitroPoseExercisesSpec::getOnPhaseChange);
@@ -36,11 +38,16 @@ namespace margelo::nitro::nitroposeexercises {
       prototype.registerHybridGetter("currentPhase", &HybridNitroPoseExercisesSpec::getCurrentPhase);
       prototype.registerHybridGetter("repCount", &HybridNitroPoseExercisesSpec::getRepCount);
       prototype.registerHybridGetter("landmarks", &HybridNitroPoseExercisesSpec::getLandmarks);
+      prototype.registerHybridGetter("resultVersion", &HybridNitroPoseExercisesSpec::getResultVersion);
+      prototype.registerHybridGetter("lastProcessingMs", &HybridNitroPoseExercisesSpec::getLastProcessingMs);
       prototype.registerHybridMethod("initialize", &HybridNitroPoseExercisesSpec::initialize);
       prototype.registerHybridMethod("release", &HybridNitroPoseExercisesSpec::release);
       prototype.registerHybridMethod("loadExercise", &HybridNitroPoseExercisesSpec::loadExercise);
       prototype.registerHybridMethod("processFrameIOS", &HybridNitroPoseExercisesSpec::processFrameIOS);
       prototype.registerHybridMethod("processFrameAndroid", &HybridNitroPoseExercisesSpec::processFrameAndroid);
+      prototype.registerHybridMethod("processFrameAndroidAsync", &HybridNitroPoseExercisesSpec::processFrameAndroidAsync);
+      prototype.registerHybridMethod("startReferenceMotion", &HybridNitroPoseExercisesSpec::startReferenceMotion);
+      prototype.registerHybridMethod("stopReferenceMotion", &HybridNitroPoseExercisesSpec::stopReferenceMotion);
       prototype.registerHybridMethod("startSession", &HybridNitroPoseExercisesSpec::startSession);
       prototype.registerHybridMethod("pauseSession", &HybridNitroPoseExercisesSpec::pauseSession);
       prototype.registerHybridMethod("resumeSession", &HybridNitroPoseExercisesSpec::resumeSession);

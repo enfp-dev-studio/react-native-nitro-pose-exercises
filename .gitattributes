@@ -1,3 +1,6 @@
 *.pbxproj -text
 # specific for windows script files
 *.bat text eol=crlf
+
+# Preserve Nitrogen output; its templates indent empty lines.
+nitrogen/generated/** linguist-generated=true whitespace=-blank-at-eol

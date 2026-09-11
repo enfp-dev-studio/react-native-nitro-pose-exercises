@@ -11,7 +11,7 @@ Pod::Spec.new do |s|
   s.authors      = package["author"]
 
   s.platforms    = { :ios => 16.0 }
-  s.source       = { :git => "https://github.com/Gautham495/react-native-nitro-pose-exercises.git", :tag => "#{s.version}" }
+  s.source       = { :git => "https://github.com/enfp-dev-studio/react-native-nitro-pose-exercises.git", :tag => "#{s.version}" }
 
   s.source_files = [
     "ios/**/*.{swift}",
@@ -28,6 +28,7 @@ Pod::Spec.new do |s|
   add_nitrogen_files(s)
 
   s.dependency "VisionCamera"
+  s.dependency "RNWorklets"
 
   install_modules_dependencies(s)
 end

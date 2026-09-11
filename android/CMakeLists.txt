@@ -6,7 +6,10 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_CXX_STANDARD 20)
 
 # Define C++ library and add all sources
-add_library(${PACKAGE_NAME} SHARED src/main/cpp/cpp-adapter.cpp)
+add_library(${PACKAGE_NAME} SHARED
+    src/main/cpp/cpp-adapter.cpp
+    ../cpp/HybridPoseCameraRuntime.cpp
+)
 
 # Add Nitrogen specs :)
 include(${CMAKE_SOURCE_DIR}/../nitrogen/generated/android/nitroposeexercises+autolinking.cmake)
@@ -24,10 +27,12 @@ target_link_libraries(
 )
 
 find_package(react-native-vision-camera REQUIRED)
+find_package(react-native-worklets REQUIRED)
 
 target_link_libraries(
     ${PACKAGE_NAME}
     react-native-vision-camera::VisionCamera
+    react-native-worklets::worklets
 )
 
 find_library(android-lib android)

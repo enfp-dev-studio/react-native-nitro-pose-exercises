@@ -10,6 +10,7 @@
 #import "NitroPoseExercises-Swift-Cxx-Umbrella.hpp"
 #import <type_traits>
 
+#include "HybridPoseCameraRuntime.hpp"
 #include "HybridNitroPoseExercisesSpecSwift.hpp"
 
 @interface NitroPoseExercisesAutolinking : NSObject
@@ -21,6 +22,15 @@
   using namespace margelo::nitro;
   using namespace margelo::nitro::nitroposeexercises;
 
+  HybridObjectRegistry::registerHybridObjectConstructor(
+    "PoseCameraRuntime",
+    []() -> std::shared_ptr<HybridObject> {
+      static_assert(std::is_default_constructible_v<HybridPoseCameraRuntime>,
+                    "The HybridObject \"HybridPoseCameraRuntime\" is not default-constructible! "
+                    "Create a public constructor that takes zero arguments to be able to autolink this HybridObject.");
+      return std::make_shared<HybridPoseCameraRuntime>();
+    }
+  );
   HybridObjectRegistry::registerHybridObjectConstructor(
     "NitroPoseExercises",
     []() -> std::shared_ptr<HybridObject> {

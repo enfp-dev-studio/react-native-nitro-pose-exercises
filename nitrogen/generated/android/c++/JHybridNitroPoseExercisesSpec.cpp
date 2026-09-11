@@ -127,6 +127,16 @@ namespace margelo::nitro::nitroposeexercises {
     auto __result = method(_javaPart);
     return __result->toCpp();
   }
+  double JHybridNitroPoseExercisesSpec::getMotionPeak() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<double()>("getMotionPeak");
+    auto __result = method(_javaPart);
+    return __result;
+  }
+  double JHybridNitroPoseExercisesSpec::getMotionBaseline() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<double()>("getMotionBaseline");
+    auto __result = method(_javaPart);
+    return __result;
+  }
   std::optional<std::function<void(const RepData& /* data */)>> JHybridNitroPoseExercisesSpec::getOnRepComplete() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JFunc_void_RepData::javaobject>()>("getOnRepComplete_cxx");
     auto __result = method(_javaPart);
@@ -304,6 +314,16 @@ namespace margelo::nitro::nitroposeexercises {
       return __vector;
     }(__result);
   }
+  double JHybridNitroPoseExercisesSpec::getResultVersion() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<double()>("getResultVersion");
+    auto __result = method(_javaPart);
+    return __result;
+  }
+  double JHybridNitroPoseExercisesSpec::getLastProcessingMs() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<double()>("getLastProcessingMs");
+    auto __result = method(_javaPart);
+    return __result;
+  }
 
   // Methods
   std::shared_ptr<Promise<void>> JHybridNitroPoseExercisesSpec::initialize(const std::string& modelPath) {
@@ -336,6 +356,29 @@ namespace margelo::nitro::nitroposeexercises {
   void JHybridNitroPoseExercisesSpec::processFrameAndroid(const std::shared_ptr<margelo::nitro::camera::HybridFrameSpec>& frame) {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(jni::alias_ref<margelo::nitro::camera::JHybridFrameSpec::JavaPart> /* frame */)>("processFrameAndroid");
     method(_javaPart, std::dynamic_pointer_cast<margelo::nitro::camera::JHybridFrameSpec>(frame)->getJavaPart());
+  }
+  std::shared_ptr<Promise<void>> JHybridNitroPoseExercisesSpec::processFrameAndroidAsync(const std::shared_ptr<margelo::nitro::camera::HybridFrameSpec>& frame) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>(jni::alias_ref<margelo::nitro::camera::JHybridFrameSpec::JavaPart> /* frame */)>("processFrameAndroidAsync");
+    auto __result = method(_javaPart, std::dynamic_pointer_cast<margelo::nitro::camera::JHybridFrameSpec>(frame)->getJavaPart());
+    return [&]() {
+      auto __promise = Promise<void>::create();
+      __result->cthis()->addOnResolvedListener([=](const jni::alias_ref<jni::JObject>& /* unit */) {
+        __promise->resolve();
+      });
+      __result->cthis()->addOnRejectedListener([=](const jni::alias_ref<jni::JThrowable>& __throwable) {
+        jni::JniException __jniError(__throwable);
+        __promise->reject(std::make_exception_ptr(__jniError));
+      });
+      return __promise;
+    }();
+  }
+  void JHybridNitroPoseExercisesSpec::startReferenceMotion() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void()>("startReferenceMotion");
+    method(_javaPart);
+  }
+  void JHybridNitroPoseExercisesSpec::stopReferenceMotion() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void()>("stopReferenceMotion");
+    method(_javaPart);
   }
   void JHybridNitroPoseExercisesSpec::startSession(double targetReps, double countdownSeconds) {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(double /* targetReps */, double /* countdownSeconds */)>("startSession");

@@ -8,6 +8,12 @@
     "androidCxxLibName": "nitroposeexercises"
   },
   "autolinking": {
+    "PoseCameraRuntime": {
+      "all": {
+        "language": "c++",
+        "implementationClassName": "HybridPoseCameraRuntime"
+      }
+    },
     "NitroPoseExercises": {
       "ios": {
         "language": "swift",

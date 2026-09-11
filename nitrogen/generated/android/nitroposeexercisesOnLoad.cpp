@@ -22,6 +22,7 @@
 #include "JFunc_void_HoldProgress.hpp"
 #include "JFunc_void.hpp"
 #include "JFunc_void_SessionResult.hpp"
+#include "HybridPoseCameraRuntime.hpp"
 #include <NitroModules/DefaultConstructableObject.hpp>
 
 namespace margelo::nitro::nitroposeexercises {
@@ -55,6 +56,15 @@ void registerAllNatives() {
   margelo::nitro::nitroposeexercises::JFunc_void_SessionResult_cxx::registerNatives();
 
   // Register Nitro Hybrid Objects
+  HybridObjectRegistry::registerHybridObjectConstructor(
+    "PoseCameraRuntime",
+    []() -> std::shared_ptr<HybridObject> {
+      static_assert(std::is_default_constructible_v<HybridPoseCameraRuntime>,
+                    "The HybridObject \"HybridPoseCameraRuntime\" is not default-constructible! "
+                    "Create a public constructor that takes zero arguments to be able to autolink this HybridObject.");
+      return std::make_shared<HybridPoseCameraRuntime>();
+    }
+  );
   HybridObjectRegistry::registerHybridObjectConstructor(
     "NitroPoseExercises",
     []() -> std::shared_ptr<HybridObject> {

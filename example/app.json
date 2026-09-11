@@ -1,4 +1,20 @@
 {
-  "name": "NitroPoseExercisesExample",
-  "displayName": "NitroPoseExercisesExample"
+  "expo": {
+    "name": "Nitro Pose Validation",
+    "slug": "nitro-pose-validation",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "scheme": "nitroposevalidation",
+    "ios": {
+      "bundleIdentifier": "com.enfpdev.nitroposeexample",
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "com.enfpdev.nitroposeexample"
+    },
+    "plugins": [
+      "@enfp-dev-studio/react-native-nitro-pose-exercises"
+    ]
+  }
 }

@@ -76,6 +76,8 @@ namespace margelo::nitro::nitroposeexercises {
     public:
       // Properties
       virtual SessionStatus getStatus() = 0;
+      virtual double getMotionPeak() = 0;
+      virtual double getMotionBaseline() = 0;
       virtual std::optional<std::function<void(const RepData& /* data */)>> getOnRepComplete() = 0;
       virtual void setOnRepComplete(const std::optional<std::function<void(const RepData& /* data */)>>& onRepComplete) = 0;
       virtual std::optional<std::function<void(ExercisePhase /* phase */)>> getOnPhaseChange() = 0;
@@ -97,6 +99,8 @@ namespace margelo::nitro::nitroposeexercises {
       virtual ExercisePhase getCurrentPhase() = 0;
       virtual double getRepCount() = 0;
       virtual std::vector<Landmark> getLandmarks() = 0;
+      virtual double getResultVersion() = 0;
+      virtual double getLastProcessingMs() = 0;
 
     public:
       // Methods
@@ -105,6 +109,9 @@ namespace margelo::nitro::nitroposeexercises {
       virtual void loadExercise(const ExerciseConfig& config) = 0;
       virtual void processFrameIOS(const std::shared_ptr<margelo::nitro::camera::HybridFrameSpec>& frame) = 0;
       virtual void processFrameAndroid(const std::shared_ptr<margelo::nitro::camera::HybridFrameSpec>& frame) = 0;
+      virtual std::shared_ptr<Promise<void>> processFrameAndroidAsync(const std::shared_ptr<margelo::nitro::camera::HybridFrameSpec>& frame) = 0;
+      virtual void startReferenceMotion() = 0;
+      virtual void stopReferenceMotion() = 0;
       virtual void startSession(double targetReps, double countdownSeconds) = 0;
       virtual void pauseSession() = 0;
       virtual void resumeSession() = 0;

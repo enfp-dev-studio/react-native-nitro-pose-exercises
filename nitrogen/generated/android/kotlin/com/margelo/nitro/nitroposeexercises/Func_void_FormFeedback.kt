@@ -10,7 +10,6 @@ package com.margelo.nitro.nitroposeexercises
 import androidx.annotation.Keep
 import com.facebook.jni.HybridData
 import com.facebook.proguard.annotations.DoNotStrip
-import dalvik.annotation.optimization.FastNative
 
 
 /**
@@ -59,7 +58,6 @@ class Func_void_FormFeedback_cxx: Func_void_FormFeedback {
   override fun invoke(feedback: FormFeedback): Unit
     = invoke_cxx(feedback)
 
-  @FastNative
   private external fun invoke_cxx(feedback: FormFeedback): Unit
 }
 

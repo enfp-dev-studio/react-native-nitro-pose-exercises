@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "packageManager": "pnpm@12.3.4",
+  "nodeMinimum": "22.13.0",
+  "hostDependencies": {
+    "expo": "57.0.20",
+    "react": "19.2.3",
+    "react-native": "0.86.3"
+  },
+  "runtimeDependencies": {
+    "@react-native/metro-config": "0.86.3",
+    "@shopify/react-native-skia": "2.6.2",
+    "expo-build-properties": "57.0.17",
+    "react-native-nitro-image": "0.15.2",
+    "react-native-nitro-modules": "0.37.1",
+    "react-native-reanimated": "4.5.1",
+    "react-native-vision-camera": "5.2.3",
+    "react-native-worklets": "0.10.1"
+  },
+  "androidMinSdk": 26,
+  "verification": {
+    "installation": "Source-only local Git dependency installed into a fresh Expo fixture with automatic prepare build, exports, peers and evaluated Expo plugin verified. Standard file:.. example installation, typecheck and Android JS export passed with one copy of each core dependency. Remote HTTPS installation remains pending; see README.md.",
+    "android": "Patch-free standard Expo installation, arm64 debug build and Android 14 camera inference, background/foreground, finish and restart verified. Actual exercise accuracy remains pending; see README.md.",
+    "ios": "Restored Apple Vision path: signed Debug build and installation on iPhone 13 mini (iOS 26.6.1) passed; user confirmed basic camera/skeleton operation. Actual exercise accuracy and the full lifecycle/rotation matrix remain pending; see README.md."
+  }
+}

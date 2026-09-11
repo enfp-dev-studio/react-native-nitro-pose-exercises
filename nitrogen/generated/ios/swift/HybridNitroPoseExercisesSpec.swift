@@ -12,6 +12,8 @@ import VisionCamera
 public protocol HybridNitroPoseExercisesSpec_protocol: HybridObject {
   // Properties
   var status: SessionStatus { get }
+  var motionPeak: Double { get }
+  var motionBaseline: Double { get }
   var onRepComplete: ((_ data: RepData) -> Void)? { get set }
   var onPhaseChange: ((_ phase: ExercisePhase) -> Void)? { get set }
   var onFormFeedback: ((_ feedback: FormFeedback) -> Void)? { get set }
@@ -24,6 +26,8 @@ public protocol HybridNitroPoseExercisesSpec_protocol: HybridObject {
   var currentPhase: ExercisePhase { get }
   var repCount: Double { get }
   var landmarks: [Landmark] { get }
+  var resultVersion: Double { get }
+  var lastProcessingMs: Double { get }
 
   // Methods
   func initialize(modelPath: String) throws -> Promise<Void>
@@ -31,6 +35,9 @@ public protocol HybridNitroPoseExercisesSpec_protocol: HybridObject {
   func loadExercise(config: ExerciseConfig) throws -> Void
   func processFrameIOS(frame: (any HybridFrameSpec)) throws -> Void
   func processFrameAndroid(frame: (any HybridFrameSpec)) throws -> Void
+  func processFrameAndroidAsync(frame: (any HybridFrameSpec)) throws -> Promise<Void>
+  func startReferenceMotion() throws -> Void
+  func stopReferenceMotion() throws -> Void
   func startSession(targetReps: Double, countdownSeconds: Double) throws -> Void
   func pauseSession() throws -> Void
   func resumeSession() throws -> Void

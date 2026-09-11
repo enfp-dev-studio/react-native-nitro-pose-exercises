@@ -126,6 +126,15 @@ interface NitroPoseExercises extends HybridObject<{
 
   // Android
   processFrameAndroid(frame: Frame): void;
+  // Tracking-only ML Kit path. Keep frame alive until this promise settles.
+  // Publishes landmarks/timing/version, without the legacy exercise state machine.
+  processFrameAndroidAsync(frame: Frame): Promise<void>;
+
+  // Reference phone-motion gate; samples stay native and are read on the worklet.
+  readonly motionPeak: number;
+  readonly motionBaseline: number;
+  startReferenceMotion(): void;
+  stopReferenceMotion(): void;
 
   // // Android: pre-resized RGBA buffer from VisionCamera Resizer (Vulkan-accelerated)
   // processFrameAndroid(
@@ -150,6 +159,10 @@ interface NitroPoseExercises extends HybridObject<{
   readonly currentPhase: ExercisePhase;
   readonly repCount: number;
   readonly landmarks: Landmark[];
+  // Successful inference results, including an empty pose. Never reset within this instance.
+  readonly resultVersion: number;
+  // Monotonic-clock duration of the most recent successful native inference.
+  readonly lastProcessingMs: number;
 
   // Session control
   startSession(targetReps: number, countdownSeconds: number): void;

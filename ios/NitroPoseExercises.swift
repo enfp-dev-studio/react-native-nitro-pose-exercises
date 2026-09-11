@@ -1,15 +1,33 @@
 // ios/NitroPoseExercises.swift
 
 import Foundation
+import Dispatch
 import NitroModules
 import VisionCamera
 import AVFoundation
 import Vision
+import CoreMotion
 
 class NitroPoseExercises: HybridNitroPoseExercisesSpec {
 
   // ─── Vision Framework ───────────────────────────────────────
   private var isInitialized = false
+  private let referenceMotion = CMMotionManager()
+  private let motionLock = NSLock()
+  private var motionActive = false
+  private var lastMotionTimestamp: TimeInterval = 0
+  private var _motionPeak: Double = 0
+  private var _motionBaseline: Double = 0
+  var motionPeak: Double {
+    motionLock.lock()
+    defer { motionLock.unlock() }
+    return _motionPeak
+  }
+  var motionBaseline: Double {
+    motionLock.lock()
+    defer { motionLock.unlock() }
+    return _motionBaseline
+  }
 
   // ─── Landmark Index Mapping ─────────────────────────────────
   // Maps Apple Vision joint names to MediaPipe landmark indices
@@ -53,6 +71,10 @@ class NitroPoseExercises: HybridNitroPoseExercisesSpec {
 
   private var _landmarks: [Landmark] = []
   var landmarks: [Landmark] { _landmarks }
+  private var _resultVersion: Double = 0
+  var resultVersion: Double { _resultVersion }
+  private var _lastProcessingMs: Double = 0
+  var lastProcessingMs: Double { _lastProcessingMs }
 
   // ─── State Machine ──────────────────────────────────────────
   private var phaseHistory: [ExercisePhase] = []
@@ -110,9 +132,53 @@ private var postureWasLost = false
   }
 
   func release() throws {
+    stopReferenceMotion()
     isInitialized = false
     _status = .idle
     resetSession()
+  }
+
+  func startReferenceMotion() throws {
+    motionLock.lock()
+    if motionActive {
+      motionLock.unlock()
+      return
+    }
+    guard referenceMotion.isDeviceMotionAvailable else {
+      motionLock.unlock()
+      throw NSError(domain: "PoseExercise", code: 1,
+        userInfo: [NSLocalizedDescriptionKey: "Device motion is unavailable"])
+    }
+    motionActive = true
+    _motionPeak = 0
+    _motionBaseline = 0
+    lastMotionTimestamp = 0
+    motionLock.unlock()
+    referenceMotion.deviceMotionUpdateInterval = 1.0 / 30.0
+    referenceMotion.startDeviceMotionUpdates(to: .main) { [weak self] data, _ in
+      guard let self, let data else { return }
+      self.motionLock.lock()
+      defer { self.motionLock.unlock() }
+      guard self.motionActive else { return }
+      // CoreMotion userAcceleration already excludes gravity and is expressed in g.
+      let a = data.userAcceleration
+      let norm = sqrt(a.x * a.x + a.y * a.y + a.z * a.z)
+      guard norm.isFinite else { return }
+      let dt = self.lastMotionTimestamp == 0 ? 0 : max(0, data.timestamp - self.lastMotionTimestamp)
+      self.lastMotionTimestamp = data.timestamp
+      self._motionPeak = max(norm, self._motionPeak * pow(0.9, dt * 30))
+      let baseline = self._motionBaseline
+      self._motionBaseline = min(0.12, max(0,
+        baseline <= 0 || norm < baseline ? norm : baseline + (norm - baseline) * 0.0005))
+    }
+  }
+
+  func stopReferenceMotion() {
+    motionLock.lock()
+    motionActive = false
+    lastMotionTimestamp = 0
+    motionLock.unlock()
+    referenceMotion.stopDeviceMotionUpdates()
   }
 
   func isReady() throws -> Bool {
@@ -203,7 +269,9 @@ func processFrameIOS(frame: any HybridFrameSpec) throws {
       let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: cgOrient, options: [:])
       
     do {
+      let processingStartedAt = DispatchTime.now().uptimeNanoseconds
       try handler.perform([request])
+      let processingMs = Double(DispatchTime.now().uptimeNanoseconds - processingStartedAt) / 1_000_000
 
       guard let observation = request.results?.first else {
         // No pose detected
@@ -212,6 +280,8 @@ func processFrameIOS(frame: any HybridFrameSpec) throws {
           onPoseLost?()
         }
         _landmarks = []
+        _lastProcessingMs = processingMs
+        _resultVersion += 1
         return
       }
 
@@ -251,6 +321,8 @@ func processFrameIOS(frame: any HybridFrameSpec) throws {
       }
 
       _landmarks = landmarkArray
+      _lastProcessingMs = processingMs
+      _resultVersion += 1
 
       if _status == .active {
         processExerciseLogic()
@@ -264,6 +336,11 @@ func processFrameIOS(frame: any HybridFrameSpec) throws {
 // func processFrameAndroid(buffer: ArrayBuffer, width: Double, height: Double, rotation: Double) {
 func processFrameAndroid(frame: any HybridFrameSpec) {
   // no-op on iOS
+}
+
+func processFrameAndroidAsync(frame: any HybridFrameSpec) -> Promise<Void> {
+  // Platform counterpart; iOS continues using the Vision processFrameIOS API.
+  return Promise.resolved()
 }
   // ═══════════════════════════════════════════════════════════
   // MARK: - Exercise Logic Engine

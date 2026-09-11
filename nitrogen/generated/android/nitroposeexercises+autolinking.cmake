@@ -34,6 +34,7 @@ target_sources(
   ../nitrogen/generated/android/nitroposeexercisesOnLoad.cpp
   # Shared Nitrogen C++ sources
   ../nitrogen/generated/shared/c++/HybridNitroPoseExercisesSpec.cpp
+  ../nitrogen/generated/shared/c++/HybridPoseCameraRuntimeSpec.cpp
   # Android-specific Nitrogen C++ sources
   ../nitrogen/generated/android/c++/JHybridNitroPoseExercisesSpec.cpp
 )

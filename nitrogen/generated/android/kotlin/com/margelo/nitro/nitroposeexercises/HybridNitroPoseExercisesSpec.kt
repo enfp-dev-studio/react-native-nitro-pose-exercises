@@ -10,6 +10,7 @@ package com.margelo.nitro.nitroposeexercises
 import androidx.annotation.Keep
 import com.facebook.jni.HybridData
 import com.facebook.proguard.annotations.DoNotStrip
+import dalvik.annotation.optimization.FastNative
 import com.margelo.nitro.core.Promise
 import com.margelo.nitro.camera.HybridFrameSpec
 import com.margelo.nitro.core.HybridObject
@@ -30,6 +31,14 @@ abstract class HybridNitroPoseExercisesSpec: HybridObject() {
   @get:DoNotStrip
   @get:Keep
   abstract val status: SessionStatus
+  
+  @get:DoNotStrip
+  @get:Keep
+  abstract val motionPeak: Double
+  
+  @get:DoNotStrip
+  @get:Keep
+  abstract val motionBaseline: Double
   
   abstract var onRepComplete: ((data: RepData) -> Unit)?
   
@@ -168,6 +177,14 @@ abstract class HybridNitroPoseExercisesSpec: HybridObject() {
   @get:DoNotStrip
   @get:Keep
   abstract val landmarks: Array<Landmark>
+  
+  @get:DoNotStrip
+  @get:Keep
+  abstract val resultVersion: Double
+  
+  @get:DoNotStrip
+  @get:Keep
+  abstract val lastProcessingMs: Double
 
   // Methods
   @DoNotStrip
@@ -189,6 +206,18 @@ abstract class HybridNitroPoseExercisesSpec: HybridObject() {
   @DoNotStrip
   @Keep
   abstract fun processFrameAndroid(frame: com.margelo.nitro.camera.HybridFrameSpec): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun processFrameAndroidAsync(frame: com.margelo.nitro.camera.HybridFrameSpec): Promise<Unit>
+  
+  @DoNotStrip
+  @Keep
+  abstract fun startReferenceMotion(): Unit
+  
+  @DoNotStrip
+  @Keep
+  abstract fun stopReferenceMotion(): Unit
   
   @DoNotStrip
   @Keep
@@ -220,6 +249,7 @@ abstract class HybridNitroPoseExercisesSpec: HybridObject() {
   @Keep
   protected open class CxxPart(javaPart: HybridNitroPoseExercisesSpec): HybridObject.CxxPart(javaPart) {
     // C++ JHybridNitroPoseExercisesSpec::CxxPart::initHybrid(...)
+    @FastNative
     external override fun initHybrid(): HybridData
   }
   override fun createCxxPart(): CxxPart {
