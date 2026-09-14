@@ -17,9 +17,11 @@
 
 ## 앱에 설치
 
-패키지: `@enfp-dev-studio/react-native-nitro-pose-exercises` · **1.1.19-enfp.2**. 기준은 **Node 22.13+ / pnpm 12.3.4 / Expo 57.0.20 / RN 0.86.3 / React 19.2.3**이며 외부 의존성 버전은 [compatibility.json](compatibility.json)에 고정한다.
+패키지: `@enfp-dev-studio/react-native-nitro-pose-exercises` · **1.1.19-enfp.2**. 기준은 **Node 22.13+ / Expo 57.0.20 / RN 0.86.3 / React 19.2.3**이며 외부 의존성 버전은 [compatibility.json](compatibility.json)에 고정한다.
 
-앱의 `pnpm-workspace.yaml`에 다음 빌드 허용 항목을 합친다. Git 항목은 이 저장소에서 가져오는 커밋의 빌드를 허용한다. [pnpm 설정](https://pnpm.io/settings/build#allowbuilds)
+**Yarn Classic 1.22.22**와 **pnpm 12.3.4**로 설치할 수 있다. 라이브러리 루트에는 `packageManager`를 지정하지 않는다. Git 설치의 `prepare`가 호출한 Yarn이 라이브러리의 pnpm 지정 때문에 중단되지 않도록 하기 위해서다. 소비 앱은 자신의 패키지 매니저 설정을 유지하며 `SKIP_YARN_COREPACK_CHECK`는 필요하지 않다.
+
+pnpm을 사용하는 앱은 `pnpm-workspace.yaml`에 다음 빌드 허용 항목을 합친다. Git 항목은 이 저장소에서 가져오는 커밋의 빌드를 허용한다. [pnpm 설정](https://pnpm.io/settings/build#allowbuilds)
 
 ```yaml
 allowBuilds:
@@ -28,13 +30,24 @@ allowBuilds:
 ```
 
 1. `compatibility.json`의 `hostDependencies`·`runtimeDependencies`를 앱에 설치한다. 원본 패키지와 이 포크를 함께 설치하지 않는다.
-2. `pnpm add "git+https://github.com/enfp-dev-studio/react-native-nitro-pose-exercises.git#<커밋해시>"`로 원격에 반영된 커밋을 설치하고 manifest·lockfile을 보관한다.
+2. `yarn add "@enfp-dev-studio/react-native-nitro-pose-exercises@git+https://github.com/enfp-dev-studio/react-native-nitro-pose-exercises.git#<커밋해시>"`로 원격에 반영된 커밋을 설치하고 manifest·lockfile을 보관한다. pnpm 앱에서는 `pnpm add`를 사용한다. 수정 전 커밋에 고정된 앱은 수정 커밋으로 의존성과 lockfile을 갱신해야 한다.
 3. Expo `plugins`에 `"@enfp-dev-studio/react-native-nitro-pose-exercises"`를 등록한다. 카메라·모션 권한 설명과 Android 최소 SDK 26을 설정하며 기존의 더 높은 설정은 보존한다.
-4. `pnpm peers check` 후 `pnpm exec expo run:android` 또는 `pnpm exec expo run:ios --device`로 빌드한다. Expo Go는 지원하지 않는다.
+4. `yarn expo run:android` 또는 `yarn expo run:ios --device`로 빌드한다. pnpm 앱에서는 `pnpm peers check` 후 `pnpm exec expo run:android` 또는 `pnpm exec expo run:ios --device`를 사용한다. Expo Go는 지원하지 않는다.
 
 Git 설치 시 `prepare`, 패키징 시 `prepack`이 `bob build`로 JS·타입·Nitro 바인딩을 생성한다. Android ML Kit는 Gradle, iOS Vision은 시스템 프레임워크로 연결된다. [Bob 빌드](https://oss.callstack.com/react-native-builder-bob/build), [pnpm Git 설치](https://pnpm.io/package-sources#git-repository)
 
 ## 개발·연동
+
+라이브러리 루트는 Yarn으로 설치·빌드·검증할 수 있다. Yarn은 `yarn.lock`, pnpm은 `pnpm-lock.yaml`을 사용하므로 의존성 변경 시 두 잠금 파일을 함께 갱신한다.
+
+```sh
+yarn install --frozen-lockfile
+yarn typecheck
+yarn test
+yarn test:git-install:yarn
+```
+
+예제 앱과 기존 pnpm 검증은 `compatibility.json`의 pnpm 12.3.4 기준을 유지한다.
 
 ```sh
 pnpm install
@@ -55,6 +68,6 @@ pnpm run example:ios --device
 
 타입 검사·테스트 70개, 소스만 있는 로컬 Git 설치의 자동 빌드·exports·peer·Expo 설정, 예제 설치·Android JS 번들과 주요 의존성 단일 로딩을 확인했다. Android에서는 카메라 추론·백그라운드 복귀·종료·재시작, iPhone 13 mini에서는 빌드·설치·기본 카메라·스켈레톤 동작을 확인했다.
 
-재검증 명령: `pnpm run typecheck`, `pnpm test`, `pnpm --dir example typecheck`, `pnpm run test:package`, `pnpm run test:git-install`.
+재검증 명령: `pnpm run typecheck`, `pnpm test`, `pnpm --dir example typecheck`, `pnpm run test:package`, `pnpm run test:git-install`, `yarn test:git-install:yarn`. Git 설치 검사는 빌드 결과가 없는 소스 스냅샷을 새 앱에 설치하며, Yarn 검사는 Corepack 검사 우회 환경변수를 제거한 상태로 실행한다.
 
 실제 운동 횟수의 정확도와 자세·가림·회전에 따른 추가 튜닝은 후속 작업이다. 원격 HTTPS 설치는 로컬 Git 설치 검사와 별도로 확인해야 한다.

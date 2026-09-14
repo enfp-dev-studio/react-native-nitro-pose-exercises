@@ -8,22 +8,27 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const own = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
 const baseline = JSON.parse(readFileSync(path.join(root, 'compatibility.json'), 'utf8'));
-assert.ok(process.argv.slice(2).every(arg => arg === '--keep-temp'), 'Usage: node scripts/git-install-smoke.mjs [--keep-temp]');
+assert.ok(process.argv.slice(2).every(arg => ['--yarn', '--keep-temp'].includes(arg)), 'Usage: node scripts/git-install-smoke.mjs [--yarn] [--keep-temp]');
+const useYarn = process.argv.includes('--yarn');
 const keep = process.argv.includes('--keep-temp');
 const temp = mkdtempSync(path.join(os.tmpdir(), 'nitro-pose-git-install-'));
 const source = path.join(temp, 'source');
 const app = path.join(temp, 'app');
 const saveJson = (file, value) => writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`);
+// Exercise ordinary installs even when the caller used a Corepack-check workaround.
+const env = { ...process.env };
+delete env.SKIP_YARN_COREPACK_CHECK;
+delete env.COREPACK_ROOT;
 const run = (command, args, cwd, extra = {}) => execFileSync(command, args, {
-  cwd, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024, ...extra,
+  cwd, env, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024, ...extra,
 });
 
 try {
   mkdirSync(source);
   mkdirSync(app);
-  const manager = own.packageManager;
-  assert.equal(manager, baseline.packageManager, 'Package-manager pins must agree');
-  assert.equal(`pnpm@${run('pnpm', ['--version'], temp).trim()}`, manager);
+  const manager = useYarn ? 'yarn@1.22.22' : baseline.packageManager;
+  const command = useYarn ? 'yarn' : 'pnpm';
+  assert.equal(`${command}@${run(command, ['--version'], temp).trim()}`, manager);
   assert.equal(own.scripts?.prepare, 'bob build', 'Git dependencies must build through the standard prepare lifecycle');
 
   // Copy the real working source, including new files and excluding deleted ones.
@@ -56,11 +61,26 @@ try {
   saveJson(path.join(app, 'app.json'), {
     expo: { name: 'Git Install Smoke', slug: 'git-install-smoke', plugins: [own.name] },
   });
-  writeFileSync(path.join(app, 'pnpm-workspace.yaml'),
-    `packages:\n  - "."\nallowBuilds:\n  "@shopify/react-native-skia": true\n  ${JSON.stringify(`${own.name}@${repository}`)}: true\n`);
-  process.stdout.write('Installing a source-only local Git dependency into an ordinary Expo fixture...\n');
-  run('pnpm', ['install', '--no-frozen-lockfile'], app, { stdio: 'inherit' });
-  run('pnpm', ['peers', 'check'], app, { stdio: 'inherit' });
+  if (!useYarn) {
+    writeFileSync(path.join(app, 'pnpm-workspace.yaml'),
+      `packages:
+  - "."
+allowBuilds:
+  "@shopify/react-native-skia": true
+  ${JSON.stringify(`${own.name}@${repository}`)}: true
+`);
+  }
+  process.stdout.write(`Installing a source-only local Git dependency with ${manager}...\n`);
+  run(command, ['install', useYarn ? '--non-interactive' : '--no-frozen-lockfile'], app, { stdio: 'inherit' });
+  if (useYarn) {
+    run('yarn', ['check', '--integrity'], app, { stdio: 'inherit' });
+    for (const [name, version] of Object.entries({ ...baseline.hostDependencies, ...baseline.runtimeDependencies })) {
+      const installedPeer = JSON.parse(readFileSync(path.join(app, 'node_modules', name, 'package.json'), 'utf8'));
+      assert.equal(installedPeer.version, version, `Unexpected installed version of ${name}`);
+    }
+  } else {
+    run('pnpm', ['peers', 'check'], app, { stdio: 'inherit' });
+  }
 
   const installed = path.join(app, 'node_modules', own.name);
   const manifest = JSON.parse(readFileSync(path.join(installed, 'package.json'), 'utf8'));
@@ -90,7 +110,7 @@ try {
 
   const config = JSON.parse(run(process.execPath, [
     path.join(app, 'node_modules', 'expo', 'bin', 'cli'), 'config', '--type', 'introspect', '--json',
-  ], app, { timeout: 30000, env: { ...process.env, EXPO_OFFLINE: '1', EXPO_NO_TELEMETRY: '1' } }));
+  ], app, { timeout: 30000, env: { ...env, EXPO_OFFLINE: '1', EXPO_NO_TELEMETRY: '1' } }));
   assert.equal(config.plugins.filter(entry => (Array.isArray(entry) ? entry[0] : entry) === own.name).length, 1);
   const mods = config._internal?.modResults;
   for (const permission of ['NSCameraUsageDescription', 'NSMotionUsageDescription']) {

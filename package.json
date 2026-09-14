@@ -209,7 +209,7 @@
     "example:ios": "pnpm --dir example ios",
     "prepare": "bob build",
     "prepack": "bob build",
-    "test:git-install": "node scripts/git-install-smoke.mjs"
-  },
-  "packageManager": "pnpm@12.3.4"
+    "test:git-install": "node scripts/git-install-smoke.mjs",
+    "test:git-install:yarn": "node scripts/git-install-smoke.mjs --yarn"
+  }
 }

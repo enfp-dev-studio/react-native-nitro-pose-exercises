@@ -31,3 +31,18 @@ jobs:
       - run: pnpm --dir example install --frozen-lockfile
       - run: pnpm --dir example run typecheck
       - run: pnpm --dir example exec expo export --platform android --output-dir ../artifacts/example-export
+
+  yarn:
+    runs-on: ubuntu-latest
+    env:
+      EXPO_NO_TELEMETRY: '1'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - run: npm install --global yarn@1.22.22
+      - run: yarn install --frozen-lockfile
+      - run: yarn typecheck
+      - run: yarn test
+      - run: yarn test:git-install:yarn
